@@ -1,0 +1,169 @@
+#Вариант 13
+#С клавиатуры вводится два числа K и N.
+#Квадратная матрица А(N,N), состоящая из 4-х равных по размерам подматриц, B,C,D,E заполняется случайным образом целыми числами в интервале [-10,10].
+#Для отладки использовать не случайное заполнение, а целенаправленное (ввод из файла и генератором).
+#Вид матрицы А: 
+#В	Е
+#С	D
+#На основе матрицы А формируется матрица  F.
+#По матрице F необходимо вывести не менее 3 разных графика.
+#Программа должна использовать функции библиотек numpy  и matplotlib
+#Формируется матрица F следующим образом: скопировать в нее А и если в С  количество четных чисел в нечетных столбцах больше,
+#чем сумма чисел в нечетных строках, то поменять местами С и Е симметрично, иначе В и Е поменять местами несимметрично. При этом матрица А не меняется.
+#После чего если определитель матрицы А больше суммы диагональных элементов матрицы F, то вычисляется выражение: A*AT – K * F-1, иначе вычисляется выражение (AТ +G-FТ)*K, где G-нижняя треугольная матрица, полученная из А.
+#Выводятся по мере формирования А, F и все матричные операции последовательно.
+
+import numpy
+import matplotlib.pyplot as plt
+
+#Подматрицы берутся из файла
+def submatrixes_from_file():
+    with open('matrix.txt', 'r') as file:
+        strings = file.readlines()
+    submatrixes = []
+    matrix = []
+    for string in strings:
+        if string.strip():
+            matrix.append([int(num) for num in string.split()])
+        else:
+            if matrix:
+                submatrixes.append(numpy.array(matrix))
+                matrix = []
+    if matrix:
+        submatrixes.append(numpy.array(matrix))
+    return submatrixes
+
+#Объединение подматриц в матрицу
+def submatrixes_merge(subm_1,subm_2,subm_3,subm_4, check=0):
+    if check == 0:
+        matrix_half_1 = numpy.concatenate((subm_1,subm_4),axis=1)
+        matrix_half_2 = numpy.concatenate((subm_2,subm_3), axis=1)
+        matrix_full = numpy.concatenate((matrix_half_1,matrix_half_2), axis=0)
+    elif check == 1:
+        matrix_half_1 = numpy.concatenate((subm_2,subm_4),axis=1)
+        matrix_half_2 = numpy.concatenate((subm_1,subm_3),axis=1)
+        matrix_full = numpy.concatenate((matrix_half_1,matrix_half_2),axis=0)
+        return matrix_full
+    elif check == 2:
+        invert_subm_1 = numpy.flip(subm_1)
+        sort_subm_4 = numpy.sort(subm_4)
+        matrix_half_1 = numpy.concatenate((sort_subm_4,invert_subm_1),axis=1)
+        matrix_half_2 = numpy.concatenate((subm_2,subm_3),axis=1)
+        matrix_full = numpy.concatenate((matrix_half_1,matrix_half_2),axis=0)
+    return matrix_full
+
+#Подматрицы заполняются случайными числами
+def random_submatrixes(n):
+    b = numpy.random.randint(-10,10,size=(n,n))
+    c = numpy.random.randint(-10,10,size=(n,n))
+    d = numpy.random.randint(-10,10,size=(n,n))
+    e = numpy.random.randint(-10,10,size=(n,n))
+    return b,c,d,e
+
+#Подматрицы создаются генератором
+def generate_submatrixes(n):
+    size = (n,n)
+    b = numpy.full(size,1)
+    c = numpy.full(size,2)
+    d = numpy.full(size,3)
+    e = numpy.full(size,4)
+    return b,c,d,e
+
+#Проверка условий формирования матрицы F
+def conditions_check(matrix):
+    number_amount = 0
+    number_sum = 0
+    for i in range(len(matrix)):
+        for j in range(len(matrix[i])):
+            if matrix[i][j]%2==0 and j%2 == 0:
+                number_amount += 1
+            if i%2 == 0:
+                number_sum += matrix[i][j]
+    return number_amount, number_sum
+
+#Вычисление выражений
+def calculations(check, mA, mA_det, mF, k):
+    if check == 1:
+        print("Результат выражения A * AT - K * F^-1:")
+        if mA_det == 0:
+            rev_mF = numpy.linalg.pinv(mF)
+        else:
+            rev_mF = numpy.linalg.inv(mF)
+        return (mA * numpy.transpose(mA)) - (k * rev_mF)
+    if check == 0:
+        print("Результат выражения (A^-1 + G - FT) * K:")
+        if mA_det == 0:
+            rev_mA = numpy.linalg.pinv(mA)
+        else:
+            rev_mA = numpy.linalg.inv(mA)
+        return (rev_mA + numpy.tril(mA) - numpy.transpose(mF)) * k
+
+#Построение графика средних значений по строкам матрицы F
+def lines_average_value(matrix):
+    line_values = numpy.mean(matrix, axis=1)
+    plt.plot(numpy.arange(len(line_values)), line_values)
+    plt.title("Среднее значение по строкам матрицы F")
+    plt.xlabel("Индекс строки")
+    plt.ylabel("Среднее значение")
+    plt.grid(True)
+    plt.show()
+
+#Построение графика средних значений по столбцам матрицы F
+def columnes_average_value(matrix):
+    columnes_values = numpy.mean(matrix, axis=0)
+    plt.plot(numpy.arange(len(columnes_values)), columnes_values)
+    plt.title("Среднее значение по столбцам матрицы F")
+    plt.xlabel("Индекс столбца")
+    plt.ylabel("Среднее значение")
+    plt.grid(True)
+    plt.show()
+
+#Тепловая карта матрицы F
+def heatmap(matrix):
+    plt.imshow(matrix, cmap='inferno')
+    plt.colorbar(label='Значения матрицы')
+    plt.title("Тепловая карта матрицы F")
+    plt.xlabel("Индекс столбца")
+    plt.ylabel("Индекс строки")
+    plt.show()
+
+k = int(input('Введите коеффициент (k):\n'))
+
+while True:
+    choice = int(input('Выберете способ определения матрицы А:\n1. Из файла\n2. Случайно\n3. Генератором\n'))
+    if choice == 1:
+        subm_B = submatrixes_from_file()[0]
+        subm_C = submatrixes_from_file()[1]
+        subm_D = submatrixes_from_file()[2]
+        subm_E = submatrixes_from_file()[3]
+        matrix_A = submatrixes_merge(subm_B, subm_C, subm_D, subm_E)
+        break
+    if choice == 2:
+        n = int(input('Введите размер подматриц матрицы А (n):\n'))
+        subm_B,subm_C,subm_D,subm_E = random_submatrixes(n)
+        matrix_A = submatrixes_merge(subm_B, subm_C, subm_D, subm_E)
+        break
+    if choice == 3:
+        n = int(input('Введите размер подматриц матрицы А (n):\n'))
+        subm_B,subm_C,subm_D,subm_E = generate_submatrixes(n)
+        matrix_A = submatrixes_merge(subm_B, subm_C, subm_D, subm_E)
+        break
+
+number_amount, number_sum = conditions_check(subm_C)
+check_1 = 1 if number_amount > number_sum else 2
+matrix_F = submatrixes_merge(subm_B,subm_C,subm_D,subm_E,check_1)
+matrix_A_determinant = numpy.linalg.det(matrix_A)
+diagonales = sum(numpy.diagonal(matrix_F)) + sum(numpy.fliplr(matrix_F).diagonal())
+check_2 = 1 if matrix_A_determinant > diagonales else 0
+
+print(f"Подматрица B:\n{subm_B}\nПодматрица C:\n{subm_C}\nПодматрица D:\n{subm_D}\nПодматрица E:\n{subm_E}\nМатрица А:\n{matrix_A}")
+print(f"Количество чётных чисел в нечётных столбцах подматрицы C: {number_amount}")
+print(f"Сумма чисел в нечётных строках подматрицы C: {number_sum}")
+print(f"Матрица F:\n{matrix_F}")
+print(f"Определитель матрицы А: {matrix_A_determinant}")
+print(f"Сумма диагоналей матрицы F: {diagonales}")
+result = calculations(check_2,matrix_A,matrix_A_determinant,matrix_F,k)
+print(result)
+lines_average_value(matrix_F)
+columnes_average_value(matrix_F)
+heatmap(matrix_F)
